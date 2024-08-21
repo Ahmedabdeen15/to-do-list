@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:to_do_list/list_item.dart';
+import 'package:to_do_list/models/list_item_model.dart';
 
 class ListScreen extends StatefulWidget {
   const ListScreen({super.key});
@@ -267,11 +268,13 @@ class _ListScreenState extends State<ListScreen> {
               itemCount: filteredTasks.length,
               itemBuilder: (ctx, index) {
                 return ListItem(
-                  name: filteredTasks[index]['name'],
-                  date: filteredTasks[index]['date'] ?? "No date",
-                  checkboxState: filteredTasks[index]['checkboxState'],
-                  onChanged: (value) => _toggleCheckbox(
-                      tasks.indexOf(filteredTasks[index]), value),
+                  listItemModel: ListItemModel(
+                    name: filteredTasks[index]['name'],
+                    date: filteredTasks[index]['date'] ?? "No date",
+                    checkboxState: filteredTasks[index]['checkboxState'],
+                    onChanged: (value) => _toggleCheckbox(
+                        tasks.indexOf(filteredTasks[index]), value),
+                  ),
                   onDelete: () =>
                       _deleteTask(tasks.indexOf(filteredTasks[index])),
                   onEdit: () => _showTaskForm(context,
