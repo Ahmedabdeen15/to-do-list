@@ -13,7 +13,7 @@ This is a simple To-Do List application built with Flutter. The app allows users
 
 ## Screenshots
 
-![To-Do List Screenshot](path_to_screenshot.png)  <!-- Replace with actual screenshot path -->
+![To-Do List Screenshot](assets/Screenshot_1724251519.png)  
 
 ## Installation
 
