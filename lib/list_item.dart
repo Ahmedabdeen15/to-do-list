@@ -24,7 +24,8 @@ class ListItem extends StatelessWidget {
       contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
       title: Text(
         name,
-        style: const TextStyle(
+        style: TextStyle(
+          decoration: checkboxState ? TextDecoration.lineThrough : null,
           fontSize: 18,
           fontWeight: FontWeight.bold,
           color: Colors.black87,
