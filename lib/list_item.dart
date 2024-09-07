@@ -5,11 +5,13 @@ class ListItem extends StatelessWidget {
   final ListItemModel listItemModel;
   final VoidCallback onDelete;
   final VoidCallback onEdit;
+  final ValueChanged<bool?> onChanged; // Callback to handle checkbox change
 
   const ListItem({
     required this.listItemModel,
     required this.onDelete,
     required this.onEdit,
+    required this.onChanged, // Added this parameter to handle checkbox interaction
     super.key,
   });
 
@@ -28,7 +30,7 @@ class ListItem extends StatelessWidget {
         ),
       ),
       subtitle: Text(
-        listItemModel.date,
+        listItemModel.dueDate,
         style: TextStyle(
           fontSize: 14,
           color: Colors.grey[600],
@@ -36,7 +38,7 @@ class ListItem extends StatelessWidget {
       ),
       leading: Checkbox(
         value: listItemModel.checkboxState,
-        onChanged: listItemModel.onChanged,
+        onChanged: onChanged, // Pass the value to the callback function
       ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,

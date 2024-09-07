@@ -1,80 +1,66 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
-import 'package:to_do_list/list_item.dart';
+import 'package:to_do_list/database/todo_db.dart';
 import 'package:to_do_list/models/list_item_model.dart';
+import 'package:to_do_list/list_item.dart';
 
 class ListScreen extends StatefulWidget {
   const ListScreen({super.key});
-
   @override
   State<ListScreen> createState() => _ListScreenState();
 }
 
 class _ListScreenState extends State<ListScreen> {
-  List<Map<String, dynamic>> tasks = [];
-  List<Map<String, dynamic>> filteredTasks = [];
+  List<ListItemModel> tasks = [];
+  List<ListItemModel> filteredTasks = [];
   var nameController = TextEditingController();
   var dateController = TextEditingController();
   int? _editingIndex;
   String _searchQuery = "";
   String _sortCriteria = 'name'; // Default sort criteria
-
+  final TodoDb todoDb = TodoDb();
   @override
   void initState() {
     super.initState();
     _loadTasks();
   }
 
-  void _loadTasks() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    List<String>? tasksString = prefs.getStringList('tasks');
-    if (tasksString != null) {
+  Future<void> _loadTasks() async {
+    final dbTasks = await todoDb.fetchAll();
+    setState(() {
+      tasks = dbTasks;
+      _filterAndSortTasks();
+    });
+  }
+
+  void _insertTask(String taskName, String taskDate) async {
+    int id = await todoDb.create(
+      title: taskName,
+      dueDate: taskDate,
+    );
+    if (id != 0) {
+      tasks.add(await todoDb.fetchById(id));
+    }
+    setState(() {
+      _filterAndSortTasks();
+    });
+  }
+
+  Future<void> _deleteTask(int index) async {
+    final taskId = tasks[index].id;
+    if (taskId != null) {
+      await todoDb.deleteTask(taskId);
       setState(() {
-        tasks = tasksString
-            .map((task) => jsonDecode(task) as Map<String, dynamic>)
-            .toList();
+        tasks.removeAt(index);
         _filterAndSortTasks();
       });
     }
   }
 
-  void _saveTasks() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    List<String> tasksString = tasks.map((task) => jsonEncode(task)).toList();
-    prefs.setStringList('tasks', tasksString);
-  }
-
-  void _addOrUpdateTask(String taskName, String taskDate) {
+  void _toggleCheckbox(int id, bool? value) async {
+    tasks[id].checkboxState = value ?? false;
+    await todoDb.updateById(id, tasks[id].name, tasks[id].checkboxState);
     setState(() {
-      if (_editingIndex == null) {
-        tasks.add({'name': taskName, 'date': taskDate, 'checkboxState': false});
-      } else {
-        tasks[_editingIndex!] = {
-          'name': taskName,
-          'date': taskDate,
-          'checkboxState': tasks[_editingIndex!]['checkboxState']
-        };
-      }
-      _saveTasks();
-      _editingIndex = null;
-      _filterAndSortTasks();
-    });
-  }
-
-  void _deleteTask(int index) {
-    setState(() {
-      tasks.removeAt(index);
-      _saveTasks();
-      _filterAndSortTasks();
-    });
-  }
-
-  void _toggleCheckbox(int index, bool? value) {
-    setState(() {
-      tasks[index]['checkboxState'] = value;
-      _saveTasks();
       _filterAndSortTasks();
     });
   }
@@ -82,8 +68,8 @@ class _ListScreenState extends State<ListScreen> {
   void _filterAndSortTasks() {
     setState(() {
       filteredTasks = tasks.where((task) {
-        final name = task['name'].toLowerCase();
-        final date = task['date']?.toLowerCase() ?? "";
+        final name = task.name.toLowerCase();
+        final date = task.dueDate.toLowerCase();
         final query = _searchQuery.toLowerCase();
         return name.contains(query) || date.contains(query);
       }).toList();
@@ -91,12 +77,11 @@ class _ListScreenState extends State<ListScreen> {
       // Sort tasks
       filteredTasks.sort((a, b) {
         if (_sortCriteria == 'name') {
-          return a['name'].compareTo(b['name']);
+          return a.name.compareTo(b.name);
         } else if (_sortCriteria == 'date') {
-          return (a['date'] ?? "").compareTo(b['date'] ?? "");
+          return (a.dueDate).compareTo(b.dueDate);
         } else if (_sortCriteria == 'checkboxState') {
-          return (a['checkboxState'] as bool ? 1 : 0)
-              .compareTo(b['checkboxState'] as bool ? 1 : 0);
+          return (a.checkboxState ? 1 : 0).compareTo(b.checkboxState ? 1 : 0);
         }
         return 0;
       });
@@ -106,8 +91,8 @@ class _ListScreenState extends State<ListScreen> {
   void _showTaskForm(BuildContext context, {int? index}) {
     if (index != null) {
       _editingIndex = index;
-      nameController.text = tasks[index]['name'];
-      dateController.text = tasks[index]['date'] ?? '';
+      nameController.text = tasks[index].name;
+      dateController.text = tasks[index].dueDate;
     } else {
       nameController.clear();
       dateController.clear();
@@ -165,7 +150,7 @@ class _ListScreenState extends State<ListScreen> {
                         String taskName = nameController.text;
                         String taskDate = dateController.text;
                         if (taskName.isNotEmpty && taskDate.isNotEmpty) {
-                          _addOrUpdateTask(taskName, taskDate);
+                          _insertTask(taskName, taskDate);
                           Navigator.pop(ctx);
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -268,13 +253,10 @@ class _ListScreenState extends State<ListScreen> {
               itemCount: filteredTasks.length,
               itemBuilder: (ctx, index) {
                 return ListItem(
-                  listItemModel: ListItemModel(
-                    name: filteredTasks[index]['name'],
-                    date: filteredTasks[index]['date'] ?? "No date",
-                    checkboxState: filteredTasks[index]['checkboxState'],
-                    onChanged: (value) => _toggleCheckbox(
-                        tasks.indexOf(filteredTasks[index]), value),
-                  ),
+                  listItemModel: filteredTasks[index],
+                  onChanged: (value) => _toggleCheckbox(
+                      tasks.indexOf(filteredTasks[index]),
+                      value), // Pass the onChanged callback
                   onDelete: () =>
                       _deleteTask(tasks.indexOf(filteredTasks[index])),
                   onEdit: () => _showTaskForm(context,
@@ -291,7 +273,7 @@ class _ListScreenState extends State<ListScreen> {
 }
 
 class TaskSearchDelegate extends SearchDelegate<String> {
-  final List<Map<String, dynamic>> tasks;
+  final List<ListItemModel> tasks;
   final ValueChanged<String> onQueryChanged;
 
   TaskSearchDelegate({
@@ -328,8 +310,8 @@ class TaskSearchDelegate extends SearchDelegate<String> {
   @override
   Widget buildResults(BuildContext context) {
     final filteredTasks = tasks.where((task) {
-      final name = task['name'].toLowerCase();
-      final date = task['date']?.toLowerCase() ?? "";
+      final name = task.name.toLowerCase();
+      final date = task.dueDate.toLowerCase();
       final queryLower = query.toLowerCase();
       return name.contains(queryLower) || date.contains(queryLower);
     }).toList();
@@ -339,8 +321,8 @@ class TaskSearchDelegate extends SearchDelegate<String> {
       itemBuilder: (context, index) {
         final task = filteredTasks[index];
         return ListTile(
-          title: Text(task['name']),
-          subtitle: Text(task['date'] ?? "No date"),
+          title: Text(task.name),
+          subtitle: Text(task.dueDate),
         );
       },
     );
