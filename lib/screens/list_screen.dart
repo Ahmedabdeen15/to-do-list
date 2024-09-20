@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:to_do_list/database/todo_db.dart';
 import 'package:to_do_list/models/list_item_model.dart';
-import 'package:to_do_list/list_item.dart';
+import 'package:to_do_list/bloc/list_item.dart';
 
 enum SortCriterias { name, date, checkboxState }
 
