@@ -2,10 +2,15 @@ import 'package:sqflite/sqflite.dart';
 import 'package:to_do_list/database/database_service.dart';
 import 'package:to_do_list/models/list_item_model.dart';
 
+
 class TodoDb {
   final String tableName = 'todoList';
+  final Future<Database> _db;
 
-  // Create the table if it doesn't exist
+  TodoDb()
+      : _db = DatabaseService()
+            .database; // Database instance is initialized only once
+
   Future<void> createTable(Database db) async {
     await db.execute("""
     CREATE TABLE IF NOT EXISTS $tableName (
@@ -19,22 +24,20 @@ class TodoDb {
     """);
   }
 
-  // Insert a new task
   Future<int> create({required String title, required String dueDate}) async {
-    final db = await DatabaseService().database;
+    final db = await _db;
     return await db.insert(
       tableName,
       {
         'title': title,
         'create_at': DateTime.now().millisecondsSinceEpoch,
-        'due_date': dueDate
+        'due_date': dueDate,
       },
     );
   }
 
-  // Fetch all tasks
   Future<List<ListItemModel>> fetchAll() async {
-    final db = await DatabaseService().database;
+    final db = await _db;
     final todoList = await db.query(
       tableName,
       orderBy: 'COALESCE(edited_at, create_at) DESC',
@@ -42,9 +45,8 @@ class TodoDb {
     return todoList.map((todo) => ListItemModel.fromSqflite(todo)).toList();
   }
 
-  // Fetch a task by ID
   Future<ListItemModel> fetchById(int id) async {
-    final db = await DatabaseService().database;
+    final db = await _db;
     final todo = await db.query(
       tableName,
       where: 'id = ?',
@@ -56,9 +58,8 @@ class TodoDb {
     throw Exception('Task not found');
   }
 
-  // Update a task by ID
   Future<int> updateById(int id, String title, bool checkboxState) async {
-    final db = await DatabaseService().database;
+    final db = await _db;
     return await db.update(
       tableName,
       {
@@ -71,9 +72,8 @@ class TodoDb {
     );
   }
 
-  // Delete a task by ID
   Future<int> deleteTask(int id) async {
-    final db = await DatabaseService().database;
+    final db = await _db;
     return await db.delete(
       tableName,
       where: 'id = ?',
