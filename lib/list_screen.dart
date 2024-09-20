@@ -4,6 +4,8 @@ import 'package:to_do_list/database/todo_db.dart';
 import 'package:to_do_list/models/list_item_model.dart';
 import 'package:to_do_list/list_item.dart';
 
+enum SortCriterias { name, date, checkboxState }
+
 class ListScreen extends StatefulWidget {
   const ListScreen({super.key});
   @override
@@ -17,7 +19,7 @@ class _ListScreenState extends State<ListScreen> {
   var dateController = TextEditingController();
   int? _editingIndex;
   String _searchQuery = "";
-  String _sortCriteria = 'name'; // Default sort criteria
+  var _sortCriteria = SortCriterias.name; // Default sort criteria
   final TodoDb todoDb = TodoDb();
   @override
   void initState() {
@@ -76,14 +78,16 @@ class _ListScreenState extends State<ListScreen> {
 
       // Sort tasks
       filteredTasks.sort((a, b) {
-        if (_sortCriteria == 'name') {
-          return a.name.compareTo(b.name);
-        } else if (_sortCriteria == 'date') {
-          return (a.dueDate).compareTo(b.dueDate);
-        } else if (_sortCriteria == 'checkboxState') {
-          return (a.checkboxState ? 1 : 0).compareTo(b.checkboxState ? 1 : 0);
+        switch (_sortCriteria) {
+          case SortCriterias.name:
+            return a.name.compareTo(b.name);
+          case SortCriterias.date:
+            return b.dueDate.compareTo(a.dueDate);
+          case SortCriterias.checkboxState:
+            return (a.checkboxState ? 1 : 0).compareTo(b.checkboxState ? 1 : 0);
+          default:
+            return 0;
         }
-        return 0;
       });
     });
   }
@@ -185,7 +189,7 @@ class _ListScreenState extends State<ListScreen> {
                 title: const Text('Name'),
                 onTap: () {
                   setState(() {
-                    _sortCriteria = 'name';
+                    _sortCriteria = SortCriterias.name;
                     _filterAndSortTasks();
                   });
                   Navigator.of(context).pop();
@@ -195,7 +199,7 @@ class _ListScreenState extends State<ListScreen> {
                 title: const Text('Due Date'),
                 onTap: () {
                   setState(() {
-                    _sortCriteria = 'date';
+                    _sortCriteria = SortCriterias.date;
                     _filterAndSortTasks();
                   });
                   Navigator.of(context).pop();
@@ -205,7 +209,7 @@ class _ListScreenState extends State<ListScreen> {
                 title: const Text('Completion Status'),
                 onTap: () {
                   setState(() {
-                    _sortCriteria = 'checkboxState';
+                    _sortCriteria = SortCriterias.checkboxState;
                     _filterAndSortTasks();
                   });
                   Navigator.of(context).pop();
